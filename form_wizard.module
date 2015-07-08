@@ -2,7 +2,7 @@
 
 /**
  * @file
- * CTools' multi-step form wizard tool.
+ * Multi-step form wizard tool.
  *
  * This tool enables the creation of multi-step forms that go from one
  * form to another. The forms themselves can allow branching if they
@@ -29,7 +29,7 @@
  *
  * Aside from the addition of the $form_info which contains an array of
  * information and configuration so the multi-step wizard can do its thing,
- * this function works a lot like drupal_build_form.
+ * this function works a lot like backdrop_build_form.
  *
  * Remember that the form builders for this form will receive
  * &$form, &$form_state, NOT just &$form_state and no additional args.
@@ -42,10 +42,10 @@
  *   The form state array; this is a reference so the caller can get back
  *   whatever information the form(s) involved left for it.
  */
-function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
+function form_wizard_multistep_form($form_info, $step, &$form_state) {
   // Make sure 'wizard' always exists for the form when dealing
   // with form caching.
-  ctools_form_include($form_state, 'wizard');
+  form_wizard_form_include($form_state, 'wizard');
 
   // allow order array to be optional
   if (empty($form_info['order'])) {
@@ -59,7 +59,7 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
     $step = array_shift($keys);
   }
 
-  ctools_wizard_defaults($form_info);
+  form_wizard_defaults($form_info);
 
   // If automated caching is enabled, ensure that everything is as it
   // should be.
@@ -85,8 +85,9 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
 
     // If absolutely nothing was set for the cache area to work on
     if (!isset($form_state[$form_info['cache location']])) {
-      ctools_include('cache');
-      $form_state[$form_info['cache location']] = ctools_cache_get($form_info['cache mechanism'], $form_info['cache key']);
+      // form_wizard_include('cache');
+      // $form_state[$form_info['cache location']] = form_wizard_cache_get($form_info['cache mechanism'], $form_info['cache key']);
+      $form_state[$form_info['cache location']] = tempstore_get($form_info['cache mechanism'], $form_info['cache key']);
     }
   }
 
@@ -105,24 +106,24 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
   if (!empty($info['include'])) {
     if (is_array($info['include'])) {
       foreach ($info['include'] as $file) {
-        ctools_form_include_file($form_state, $file);
+        form_wizard_form_include_file($form_state, $file);
       }
     }
     else {
-      ctools_form_include_file($form_state, $info['include']);
+      form_wizard_form_include_file($form_state, $info['include']);
     }
   }
 
-  // This tells drupal_build_form to apply our wrapper to the form. It
+  // This tells backdrop_build_form to apply our wrapper to the form. It
   // will give it buttons and the like.
-  $form_state['wrapper_callback'] = 'ctools_wizard_wrapper';
+  $form_state['wrapper_callback'] = 'form_wizard_wrapper';
   if (!isset($form_state['rerender'])) {
     $form_state['rerender'] = FALSE;
   }
 
   $form_state['no_redirect'] = TRUE;
 
-  $output = drupal_build_form($info['form id'], $form_state);
+  $output = backdrop_build_form($info['form id'], $form_state);
 
   if (empty($form_state['executed']) || !empty($form_state['rerender'])) {
     if (empty($form_state['title']) && !empty($info['title'])) {
@@ -135,37 +136,44 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
     }
 
     // Automatically use the modal tool if set to true.
-    if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
-      ctools_include('modal');
+    // @todo
+/*     if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
+      form_wizard_include('modal');
 
       // This overwrites any previous commands.
-      $form_state['commands'] = ctools_modal_form_render($form_state, $output);
+      $form_state['commands'] = form_wizard_modal_form_render($form_state, $output);
     }
-  }
+ */  }
 
   if (!empty($form_state['executed'])) {
     // We use the plugins get_function format because it's powerful and
     // not limited to just functions.
-    ctools_include('plugins');
+    // form_wizard_include('plugins');
 
     if (isset($form_state['clicked_button']['#wizard type'])) {
       $type = $form_state['clicked_button']['#wizard type'];
       // If we have a callback depending upon the type of button that was
       // clicked, call it.
-      if ($function = ctools_plugin_get_function($form_info, "$type callback")) {
-        $function($form_state);
-      }
+      // if ($function = form_wizard_plugin_get_function($form_info, "$type callback")) {
+        // $function($form_state);
+      // }
+      $callback = $type . ' callback';
+      $function = $form_info[$callback];
+      $function($form_state);
 
       // If auto-caching is on, we need to write the cache on next and
       // clear the cache on finish.
       if (!empty($form_info['auto cache'])) {
         if ($type == 'next') {
-          ctools_include('cache');
-          ctools_cache_set($form_info['cache mechanism'], $form_info['cache key'], $form_state[$form_info['cache location']]);
+          // form_wizard_include('cache');
+          $expire = 21600;
+          // form_wizard_cache_set($form_info['cache mechanism'], $form_info['cache key'], $form_state[$form_info['cache location']]);
+          tempstore_set($form_info['cache mechanism'], $form_info['cache key'], $form_state[$form_info['cache location']], REQUEST_TIME + $expire);
         }
         elseif ($type == 'finish') {
-          ctools_include('cache');
-          ctools_cache_clear($form_info['cache mechanism'], $form_info['cache key']);
+          // form_wizard_include('cache');
+          // form_wizard_cache_clear($form_info['cache mechanism'], $form_info['cache key']);
+          tempstore_clear($form_info['cache mechanism'], $form_info['cache key']);
         }
       }
 
@@ -179,23 +187,24 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
       }
 
       // If the modal is in use, some special code for it:
-      if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
+      // @todo
+/*       if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
         if ($type != 'next') {
           // Automatically dismiss the modal if we're not going to another form.
-          ctools_include('modal');
-          $form_state['commands'][] = ctools_modal_command_dismiss();
+          form_wizard_include('modal');
+          $form_state['commands'][] = form_wizard_modal_command_dismiss();
         }
       }
-    }
+ */    }
 
     if (empty($form_state['ajax'])) {
       // redirect, if one is set.
       if ($form_state['redirect']) {
         if (is_array($form_state['redirect'])) {
-          call_user_func_array('drupal_goto', $form_state['redirect']);
+          call_user_func_array('backdrop_goto', $form_state['redirect']);
         }
         else {
-          drupal_goto($form_state['redirect']);
+          backdrop_goto($form_state['redirect']);
         }
       }
     }
@@ -206,7 +215,7 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
       unset($form_state['executed']);
       unset($form_state['post']);
       unset($form_state['next']);
-      return ctools_wizard_multistep_form($form_info, $next, $form_state);
+      return form_wizard_multistep_form($form_info, $next, $form_state);
     }
 
     // If the callbacks wanted to do something besides go to the next form,
@@ -226,7 +235,7 @@ function ctools_wizard_multistep_form($form_info, $step, &$form_state) {
 /**
  * Provide a wrapper around another form for adding multi-step information.
  */
-function ctools_wizard_wrapper($form, &$form_state) {
+function form_wizard_wrapper($form, &$form_state) {
   $form_info = &$form_state['form_info'];
   $info = $form_info['forms'][$form_state['step']];
 
@@ -256,10 +265,10 @@ function ctools_wizard_wrapper($form, &$form_state) {
 
     if (!empty($form_info['show trail'])) {
       if (!empty($form_info['free trail'])) {
-        // ctools_wizard_get_path() returns results suitable for
+        // form_wizard_get_path() returns results suitable for
         // $form_state['redirect] which can only be directly used in
-        // drupal_goto. We have to futz a bit with it.
-        $path = ctools_wizard_get_path($form_info, $id);
+        // backdrop_goto. We have to futz a bit with it.
+        $path = form_wizard_get_path($form_info, $id);
         $options = array();
         if (!empty($path[1])) {
           $options = $path[1];
@@ -271,14 +280,16 @@ function ctools_wizard_wrapper($form, &$form_state) {
   }
 
   // Display the trail if instructed to do so.
-  if (!empty($form_info['show trail'])) {
-    ctools_add_css('wizard');
-    $form['ctools_trail'] = array(
-      '#markup' => theme(array('ctools_wizard_trail__' . $form_info['id'], 'ctools_wizard_trail'), array('trail' => $trail, 'form_info' => $form_info)),
+/*   if (!empty($form_info['show trail'])) {
+    // form_wizard_add_css('wizard');
+    backdrop_add_css(backdrop_get_path('module', 'form_wizard') . "/css/form_wizard.css");
+cache_clear_all();
+    $form['form_wizard_trail'] = array(
+      '#markup' => theme('form_wizard_trail', array('trail' => $trail, 'form_info' => $form_info)),
       '#weight' => -1000,
     );
   }
-
+ */
   if (empty($form_info['no buttons'])) {
     // Ensure buttons stay on the bottom.
     $form['buttons'] = array(
@@ -288,7 +299,7 @@ function ctools_wizard_wrapper($form, &$form_state) {
 
     $button_attributes = array();
     if (!empty($form_state['ajax']) && empty($form_state['modal'])) {
-      $button_attributes = array('class' => array('ctools-use-ajax'));
+      $button_attributes = array('class' => array('form_wizard-use-ajax'));
     }
 
     if (!empty($form_info['show back']) && isset($form_state['previous'])) {
@@ -300,7 +311,7 @@ function ctools_wizard_wrapper($form, &$form_state) {
         '#weight' => -2000,
         '#limit_validation_errors' => array(),
         // hardcode the submit so that it doesn't try to save data.
-        '#submit' => array('ctools_wizard_submit'),
+        '#submit' => array('form_wizard_submit'),
         '#attributes' => $button_attributes,
       );
 
@@ -354,7 +365,7 @@ function ctools_wizard_wrapper($form, &$form_state) {
         '#wizard type' => 'cancel',
         // hardcode the submit so that it doesn't try to save data.
         '#limit_validation_errors' => array(),
-        '#submit' => array('ctools_wizard_submit'),
+        '#submit' => array('form_wizard_submit'),
         '#attributes' => $button_attributes,
       );
     }
@@ -369,7 +380,7 @@ function ctools_wizard_wrapper($form, &$form_state) {
     }
 
     // Set up our submit handler after theirs. Since putting something here will
-    // skip Drupal's autodetect, we autodetect for it.
+    // skip Backdrop's autodetect, we autodetect for it.
 
     // We make sure ours is after theirs so that they get to change #next if
     // the want to.
@@ -380,11 +391,11 @@ function ctools_wizard_wrapper($form, &$form_state) {
     if (isset($info['submit']) && function_exists($info['submit'])) {
       $form['#submit'][] = $info['submit'];
     }
-    $form['#submit'][] = 'ctools_wizard_submit';
+    $form['#submit'][] = 'form_wizard_submit';
   }
 
   if (!empty($form_state['ajax'])) {
-    $params = ctools_wizard_get_path($form_state['form_info'], $form_state['step']);
+    $params = form_wizard_get_path($form_state['form_info'], $form_state['step']);
     if (count($params) > 1) {
       $url = array_shift($params);
       $options = array();
@@ -414,7 +425,7 @@ function ctools_wizard_wrapper($form, &$form_state) {
 /**
  * On a submit, go to the next form.
  */
-function ctools_wizard_submit(&$form, &$form_state) {
+function form_wizard_submit(&$form, &$form_state) {
   if (isset($form_state['clicked_button']['#wizard type'])) {
     $type = $form_state['clicked_button']['#wizard type'];
 
@@ -429,10 +440,10 @@ function ctools_wizard_submit(&$form, &$form_state) {
         $form_state['redirect'] = $form_state['form_info']['cancel path'];
       }
       else if ($type == 'next') {
-        $form_state['redirect'] = ctools_wizard_get_path($form_state['form_info'], $form_state['clicked_button']['#next']);
+        $form_state['redirect'] = form_wizard_get_path($form_state['form_info'], $form_state['clicked_button']['#next']);
         if (!empty($_GET['destination'])) {
-          // We don't want drupal_goto redirect this request
-          // back. ctools_wizard_get_path ensures that the destination is
+          // We don't want backdrop_goto redirect this request
+          // back. form_wizard_get_path ensures that the destination is
           // carried over on subsequent pages.
           unset($_GET['destination']);
         }
@@ -450,7 +461,7 @@ function ctools_wizard_submit(&$form, &$form_state) {
 /**
  * Create a path from the form info and a given step.
  */
-function ctools_wizard_get_path($form_info, $step) {
+function form_wizard_get_path($form_info, $step) {
   if (is_array($form_info['path'])) {
     foreach ($form_info['path'] as $id => $part) {
       $form_info['path'][$id] = str_replace('%step', $step, $form_info['path'][$id]);
@@ -462,7 +473,7 @@ function ctools_wizard_get_path($form_info, $step) {
   }
 
   // If destination is set, carry it over so it'll take effect when
-  // saving. The submit handler will unset destination to avoid drupal_goto
+  // saving. The submit handler will unset destination to avoid backdrop_goto
   // redirecting us.
   if (!empty($_GET['destination'])) {
     // Ensure that options is an array.
@@ -472,7 +483,7 @@ function ctools_wizard_get_path($form_info, $step) {
     // Ensure that the query part of options is an array.
     $path[1] += array('query' => array());
     // Add the destination parameter, if not set already.
-    $path[1]['query'] += drupal_get_destination();
+    $path[1]['query'] += backdrop_get_destination();
   }
 
   return $path;
@@ -484,7 +495,7 @@ function ctools_wizard_get_path($form_info, $step) {
  * $form_info['id']_$hook
  * $form_info['id']_$form_info['forms'][$step_key]_$hook
  */
-function ctools_wizard_defaults(&$form_info) {
+function form_wizard_defaults(&$form_info) {
   $hook = $form_info['id'];
   $defaults = array(
     'show trail' => FALSE,
@@ -530,5 +541,57 @@ function ctools_wizard_defaults(&$form_info) {
         $form_info[$key] = $wizard_callback;
       }
     }
+  }
+}
+
+/**
+ * Add an arbitrary path to the $form_state so it can work with form cache.
+ *
+ * module_load_include uses an unfortunately annoying syntax to work, making it
+ * difficult to translate the more simple $path + $file syntax.
+ */
+function form_wizard_form_include_file(&$form_state, $filename) {
+  if (!isset($form_state['build_info']['args'])) {
+    $form_state['build_info']['args'] = array();
+  }
+
+  // Now add this to the build info files so that AJAX requests will know to load it.
+  $form_state['build_info']['files']["$filename"] = $filename;
+  require_once BACKDROP_ROOT . '/' . $filename;
+}
+
+/**
+ * Include .inc files in a form context.
+ *
+ * This is a variant of form_wizard_include that will save information in the
+ * the form_state so that cached forms will properly include things.
+ */
+function form_wizard_form_include(&$form_state, $file, $module = 'form_wizard', $dir = 'includes') {
+  if (!isset($form_state['build_info']['args'])) {
+    $form_state['build_info']['args'] = array();
+  }
+
+  $dir = '/' . ($dir ? $dir . '/' : '');
+  form_load_include($form_state, 'inc', $module, $dir . $file);
+}
+
+/**
+ * @file
+ * Themable for the wizard tool.
+ */
+
+function form_wizard_theme($existing, $type, $theme, $path) {
+  $trail['form_wizard_trail'] = array(
+    'variables' => array('trail' => NULL, 'form_info' => NULL, 'divider' => ' » '),
+  );
+  return $trail;
+}
+
+/**
+ * Themable display of the 'breadcrumb' trail to show the order of the forms.
+ */
+function theme_form_wizard_trail($vars) {
+  if (!empty($vars['trail'])) {
+    return '<div class="wizard-trail">' . implode($vars['divider'], $vars['trail']) . '</div>';
   }
 }
