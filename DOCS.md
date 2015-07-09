@@ -15,7 +15,7 @@ The form info array
 
 The wizard starts with an array of data that describes all of the forms 
 available to the wizard and sets options for how the wizard will present and 
-control the flow. Here is an example of the $form_info array as used in the 
+control the flow. Here is an example of the `$form_info` array as used in the 
 my_form module: 
 
 ```
@@ -72,87 +72,136 @@ The Form Array
 
 Here is a full list of every item that can be in the form info array:
 
-id
+**id**
+
 An id for wizard. This is used like a hook to automatically name callbacks, as 
 well as a form step's form building function. It is also used in trail theming. 
 
-path
+
+**path**
+
 The path to use when redirecting between forms. %step will be replaced with the 
 key for the form.
-return path
+
+**return path**
+
 When a form is complete, this is the path to go to. This is required if the 
 'return' button is shown and not using AJAX. It is also used for the 'Finish' 
 button. If it is not present and needed, the cancel path will also be checked.
-cancel path
+
+**cancel path**
+
 When a form is canceled, this is the path to go to. This is required if the 
 'cancel' is shown and not using AJAX.
-show trail
+
+**show trail**
+
 If set to TRUE, the form trail will be shown like a breadcrumb at the top of 
 each form. Defaults to FALSE.
-show back
+
+**show back**
+
 If set to TRUE, show a back button on each form. Defaults to FALSE.
-show return
+
+**show return**
+
 If set to TRUE, show a return button. Defaults to FALSE.
-show cancel
+
+**show cancel**
+
 If set to TRUE, show a cancel button. Defaults to FALSE.
-back text
+
+**back text**
+
 Set the text of the 'back' button. Defaults to t('Back').
-next text
+
+**next text**
+
 Set the text of the 'next' button. Defaults to t('Continue').
-return text
+
+**return text**
+
 Set the text of the 'return' button. Defaults to t('Update and return').
-finish text
+
+**finish text**
+
 Set the text of the 'finish' button. Defaults to t('Finish').
-cancel text
+
+**cancel text**
+
 Set the text of the 'cancel' button. Defaults to t('Cancel').
-ajax
+
+**ajax**
+
 Turn on AJAX capabilities. Defaults to FALSE.
-modal
+
+**modal**
+
 Put the wizard in the modal tool. The modal must already be open and called 
 from an ajax button for this to work, which is easily accomplished using 
 functions provided by the modal tool.
-ajax render
+
+**ajax render**
+
 A callback to display the rendered form via ajax. This is not required if 
 using the modal tool, but is required otherwise since ajax by itself does 
-not know how to render the results. Params: &$form_state, $output.
-finish callback
+not know how to render the results. Params: `&$form_state`, `$output`.
+
+**finish callback**
+
 The function to call when a form is complete and the finish button has been 
 clicked. This function should finalize all data. Params: &$form_state. Defaults 
-to $form_info['id']._finish if function exists.
-cancel callback
+to `$form_info['id']._finish` if function exists.
+
+**cancel callback**
+
 The function to call when a form is canceled by the user. This function should 
-clean up any data that is cached. Params: &$form_state. Defaults to 
-$form_info['id']._cancel if function exists.
-return callback
+clean up any data that is cached. Params: `&$form_state`. Defaults to 
+`$form_info['id']._cancel` if function exists.
+
+**return callback**
+
 The function to call when a form is complete and the return button has been 
-clicked. This is often the same as the finish callback. Params: &$form_state. 
-Defaults to $form_info['id']._return if function exists.
-next callback
+clicked. This is often the same as the finish callback. Params: `&$form_state`. 
+Defaults to `$form_info['id']._return` if function exists.
+
+**next callback**
+
 The function to call when the next button has been clicked. This function 
 should take the submitted data and cache it for later use by the finish 
-callback. Params: &$form_state. Defaults to $form_info['id']._next if function 
+callback. Params: `&$form_state`. Defaults to `$form_info['id']._next` if function 
 exists.
-order
+
+**order**
+
 An optional array of forms, keyed by the step, which represents the default 
 order the forms will be displayed in. If not set, the forms array will control 
 the order. Note that submit callbacks can override the order so that branching 
 logic can be used.
-forms
+
+**forms**
+
 An array of form info arrays, keyed by step, describing every form available 
 to the wizard. If order array isn't set, the wizard will use this to set the 
 default order. Each array contains:
-form id
+
+**form id**
+
 The id of the form, as used in the Backdrop form system. This is also the name 
 of the function that represents the form builder. Defaults to 
-$form_info['id']._.$step._form.
-include
+`$form_info['id']._.$step._form`.
+
+**include**
+
 The name of a file to include which contains the code for this form. This makes 
 it easy to include the form wizard in another file or set of files. This must 
-be the full path of the file, so be sure to use backdrop_get_path() when setting 
+be the full path of the file, so be sure to use `backdrop_get_path()` when setting 
 this. This can also be an array of files if multiple files need to be included.
-title
+
+**title**
+
 The title of the form, to be optionally set via backdrop_get_title. This is 
-required when using the modal if $form_state['title'] is not set.
+required when using the modal if `$form_state['title']` is not set.
 
 Invoking the form wizard
 -------------------
@@ -290,7 +339,7 @@ Proper handling of back button
 -------------------
 
 When using 'show back' => TRUE the cached data should be assigned to the 
-#default_value form property. Otherwise when the user goes back to the previous 
+`#default_value` form property. Otherwise when the user goes back to the previous 
 step the forms default values instead of his (cached) input is used.
 
   ```
@@ -354,8 +403,8 @@ Wizard for anonymous users
 
 If you are creating a wizard which is be used by anonymous users, you might 
 run into some issues with backdrop's caching for anonymous users. You can 
-circumvent this by using hook_init and telling backdrop to not cache your wizard 
-pages:
+circumvent this by using `hook_init()` and telling backdrop to not cache your 
+wizard pages:
 
   ```
 
