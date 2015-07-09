@@ -136,14 +136,12 @@ function form_wizard_multistep_form($form_info, $step, &$form_state) {
     }
 
     // Automatically use the modal tool if set to true.
-    // @todo
-/*     if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
-      form_wizard_include('modal');
+    if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
 
       // This overwrites any previous commands.
       $form_state['commands'] = form_wizard_modal_form_render($form_state, $output);
     }
- */  }
+  }
 
   if (!empty($form_state['executed'])) {
     // We use the plugins get_function format because it's powerful and
@@ -188,14 +186,13 @@ function form_wizard_multistep_form($form_info, $step, &$form_state) {
 
       // If the modal is in use, some special code for it:
       // @todo
-/*       if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
+      if (!empty($form_state['modal']) && empty($form_state['modal return'])) {
         if ($type != 'next') {
           // Automatically dismiss the modal if we're not going to another form.
-          form_wizard_include('modal');
-          $form_state['commands'][] = form_wizard_modal_command_dismiss();
+          $form_state['commands'][] = array('command' => 'modal_dismiss');
         }
       }
- */    }
+    }
 
     if (empty($form_state['ajax'])) {
       // redirect, if one is set.
@@ -594,4 +591,34 @@ function theme_form_wizard_trail($vars) {
   if (!empty($vars['trail'])) {
     return '<div class="wizard-trail">' . implode($vars['divider'], $vars['trail']) . '</div>';
   }
+}
+
+function form_wizard_modal_form_render($form_state, $output) {
+  if (is_array($output)) {
+    $output = backdrop_render($output);
+  }
+
+  $title = empty($form_state['title']) ? backdrop_get_title() : $form_state['title'];
+
+  // If there are messages for the form, render them.
+  if ($messages = theme('status_messages')) {
+    $output = $messages . $output;
+  }
+
+  $commands = array();
+  // If the form has not yet been rendered, render it.
+  $commands[] = form_wizard_modal_command_display($title, $output);
+  return $commands;
+}
+
+function form_wizard_modal_command_display($title, $html) {
+  if (is_array($html)) {
+    $html = backdrop_render($html);
+  }
+
+  return array(
+    'command' => 'modal_display', 
+    'title' => $title, 
+    'output' => $html,
+  );
 }
